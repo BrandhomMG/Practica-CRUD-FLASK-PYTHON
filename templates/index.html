@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Créditos</title>
+    <link rel="stylesheet" href="{{url_for('static', filename='design.css')}}">
+</head>
+<body>
+    <main class="container p-4">
+        <h1 class="display-4 text-center title mt-4">Lista de Créditos</h1>
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        {% with messages = get_flashed_messages(with_categories=True) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                        <h2>Registro de nuevo cliente</h2>
+                        <br><br>
+                        <form action="/credit" method="POST">
+                            <input type="text" class="form-control" placeholder="Nombre del cliente" id="cliente" name="cliente" required autofocus>
+                            <br><br>
+                            <input type="number" class="form-control" placeholder="Monto" id="monto" name="monto" step="0.01" required>
+                            <br><br>
+                            <input type="number" class="form-control" placeholder="Tasa de Interes" id="tasa_interes" name="tasa_interes" step="0.01" required>
+                            <br><br>
+                            <input type="number" class="form-control" placeholder="Plazo en Meses" id="plazo" name="plazo" required>
+                            <br><br>
+                            <div class="form-group">
+                                <label for="fecha_otorgamiento" class="form-label">Fecha de Otorgamiento:</label>
+                                <input type="date" class="form-control" id="fecha_otorgamiento" name="fecha_otorgamiento" required>
+                            </div>
+                            <br><br>
+                            <button type="submit" class="btn btn-primary btn-block">Save</button>
+                        </form>  
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped table-bordered text-center">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Cliente</th>
+                                    <th>Monto</th>
+                                    <th>Tasa de Interés</th>
+                                    <th>Plazo</th>
+                                    <th>Fecha de Otorgamiento</th>
+                                    <th>Eliminar/Editar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for credit in credits %}
+                                <tr>
+                                    <td>{{ credit.id }}</td>                                    
+                                    <td>{{ credit.cliente }}</td>
+                                    <td>${{ "{:,.2f}".format(credit.monto) }}</td>
+                                    <td>{{ credit.tasa_interes }}%</td>
+                                    <td>{{ credit.plazo }} Meses</td>
+                                    <td>{{ credit.fecha_otorgamiento }}</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteCredit('{{ credit.id }}')">Done</button>
+                                        <button class="btn btn-warning btn-sm" onclick="openEditModal('{{ credit.id }}', '{{ credit.cliente }}', '{{ credit.monto }}', '{{ credit.tasa_interes }}', '{{ credit.plazo }}', '{{ credit.fecha_otorgamiento }}')">Edit</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <script>
+                            function deleteCredit(id) {
+                                if (!confirm("¿Estás seguro de eliminar este crédito?")) {
+                                    return;
+                                }
+                    
+                                fetch(`/credit/${id}`, {
+                                    method: "DELETE",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        alert("Crédito eliminado exitosamente");
+                                        location.reload(); // Recarga la página para reflejar cambios
+                                    } else {
+                                        alert("Error al eliminar el crédito");
+                                    }
+                                })
+                                .catch(error => console.error("Error:", error));
+                            }
+                        </script> 
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+        <div style="background:#fff; padding:20px; width:300px; margin:100px auto; border-radius:10px;">
+            <h3>Editar Crédito</h3>
+            <input type="hidden" id="edit_id">
+            <label>Cliente:</label>
+            <input type="text" id="edit_cliente" class="form-control"><br>
+            <label>Monto:</label>
+            <input type="number" id="edit_monto" class="form-control"><br>
+            <label>Tasa de Interés:</label>
+            <input type="text" id="edit_tasa" class="form-control"><br>
+            <label>Plazo:</label>
+            <input type="text" id="edit_plazo" class="form-control"><br>
+            <label>Fecha de Otorgamiento:</label>
+            <input type="date" id="edit_fecha" class="form-control"><br>
+            <button class="btn btn-success btn-sm" onclick="saveEdit()">Guardar</button>
+            <button class="btn btn-secondary btn-sm" onclick="closeEditModal()">Cancelar</button>
+        </div>
+    </div>   
+    <script>
+        function openEditModal(id, cliente, monto, tasa, plazo, fecha) {
+            document.getElementById("edit_id").value = id;
+            document.getElementById("edit_cliente").value = cliente;
+            document.getElementById("edit_monto").value = monto;
+            document.getElementById("edit_tasa").value = tasa;
+            document.getElementById("edit_plazo").value = plazo;
+            document.getElementById("edit_fecha").value = fecha;
+            document.getElementById("editModal").style.display = "block";
+        }
+    
+        function closeEditModal() {
+            document.getElementById("editModal").style.display = "none";
+        }
+    
+        function saveEdit() {
+            let id = document.getElementById("edit_id").value;
+            let cliente = document.getElementById("edit_cliente").value;
+            let monto = document.getElementById("edit_monto").value;
+            let tasa = document.getElementById("edit_tasa").value;
+            let plazo = document.getElementById("edit_plazo").value;
+            let fecha = document.getElementById("edit_fecha").value;
+    
+            fetch(`/credit`, {
+                method: "PUT",  // Método para actualizar
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: id,
+                    cliente: cliente,
+                    monto: monto,
+                    tasa_interes: tasa,
+                    plazo: plazo,
+                    fecha_otorgamiento: fecha
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Respuesta del servidor:", data); 
+                if (data.success) {
+                    alert("Crédito actualizado exitosamente");
+                    location.reload();  // Recarga la página para ver cambios
+                } else {
+                    alert("Error al actualizar el crédito");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        fetch("/credit_data")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById("creditChart").getContext("2d");
+                new Chart(ctx, {
+                    type: "bar",  // Puedes usar "line", "pie", etc.
+                    data: {
+                        labels: data.clientes,  // Nombres de clientes
+                        datasets: [{
+                            label: "Monto de Créditos",
+                            data: data.montos,  // Montos de créditos
+                            backgroundColor: "rgba(54, 162, 235, 0.5)",
+                            borderColor: "rgba(54, 162, 235, 1)",
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error("Error cargando los datos:", error));
+    </script>
+    <canvas id="creditChart"></canvas> 
+</body>
+</html>
